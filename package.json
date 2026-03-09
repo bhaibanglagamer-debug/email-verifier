@@ -1,0 +1,16 @@
+{
+  "name": "email-verifier",
+  "version": "1.0.0",
+  "description": "Bulk email verifier with SMTP, MX, and syntax checks",
+  "main": "server.js",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "csv-parse": "^5.5.3",
+    "express": "^4.18.2",
+    "json2csv": "^6.0.0-alpha.2",
+    "multer": "^1.4.5-lts.1"
+  }
+}
