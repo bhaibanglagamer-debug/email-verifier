@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Verify email addresses in bulk — syntax, MX, SMTP, and catch-all detection in one click." />
+  <title>Email Verifier — Bulk Verification Tool</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- Animated background blobs -->
+  <div class="bg-blobs">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+  </div>
+
+  <div class="app">
+    <!-- Header -->
+    <header class="header">
+      <div class="logo">
+        <span class="logo-icon">✉️</span>
+        <h1>Email<span class="accent">Verifier</span></h1>
+      </div>
+      <p class="tagline">Verify emails in bulk — syntax, domain, mailbox &amp; catch-all detection</p>
+    </header>
+
+    <!-- Input Section -->
+    <section class="card input-card" id="inputSection">
+      <div class="card-header">
+        <h2>📥 Add Emails</h2>
+        <div class="toggle-group">
+          <button class="toggle-btn active" id="btnPaste" onclick="switchMode('paste')">Paste</button>
+          <button class="toggle-btn" id="btnUpload" onclick="switchMode('upload')">Upload CSV</button>
+        </div>
+      </div>
+
+      <!-- Paste mode -->
+      <div id="pasteMode">
+        <textarea
+          id="emailInput"
+          placeholder="Enter emails, one per line...&#10;&#10;example@gmail.com&#10;test@yahoo.com&#10;john.doe@company.com"
+          rows="8"
+        ></textarea>
+        <div class="input-footer">
+          <span class="email-count" id="emailCount">0 emails</span>
+          <button class="btn-primary" id="verifyBtn" onclick="verifyEmails()">
+            <span class="btn-icon">🚀</span> Verify All
+          </button>
+        </div>
+      </div>
+
+      <!-- Upload mode -->
+      <div id="uploadMode" class="hidden">
+        <div
+          class="drop-zone"
+          id="dropZone"
+          onclick="document.getElementById('fileInput').click()"
+        >
+          <div class="drop-icon">📄</div>
+          <p class="drop-text">Drop your CSV file here or <span class="browse-link">browse</span></p>
+          <p class="drop-hint">Supports .csv and .txt files — max 10,000 emails</p>
+          <input type="file" id="fileInput" accept=".csv,.txt" hidden onchange="handleFile(event)" />
+        </div>
+        <div id="fileName" class="file-name hidden"></div>
+        <div class="input-footer upload-footer hidden" id="uploadFooter">
+          <span class="email-count" id="fileEmailCount">0 emails</span>
+          <button class="btn-primary" id="uploadVerifyBtn" onclick="verifyCSV()">
+            <span class="btn-icon">🚀</span> Verify All
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Progress Section -->
+    <section class="card progress-card hidden" id="progressSection">
+      <div class="progress-header">
+        <h2>⚡ Verifying...</h2>
+        <span class="progress-percent" id="progressPercent">0%</span>
+      </div>
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" id="progressBar"></div>
+      </div>
+      <p class="progress-status" id="progressStatus">Initializing verification pipeline...</p>
+    </section>
+
+    <!-- Summary Cards -->
+    <section class="summary-grid hidden" id="summarySection">
+      <div class="summary-card summary-total">
+        <span class="summary-number" id="sumTotal">0</span>
+        <span class="summary-label">Total</span>
+      </div>
+      <div class="summary-card summary-valid">
+        <span class="summary-number" id="sumValid">0</span>
+        <span class="summary-label">Valid ✅</span>
+      </div>
+      <div class="summary-card summary-invalid">
+        <span class="summary-number" id="sumInvalid">0</span>
+        <span class="summary-label">Invalid ❌</span>
+      </div>
+      <div class="summary-card summary-risky">
+        <span class="summary-number" id="sumRisky">0</span>
+        <span class="summary-label">Risky ⚠️</span>
+      </div>
+      <div class="summary-card summary-unknown">
+        <span class="summary-number" id="sumUnknown">0</span>
+        <span class="summary-label">Unknown ❔</span>
+      </div>
+    </section>
+
+    <!-- Results Table -->
+    <section class="card results-card hidden" id="resultsSection">
+      <div class="results-header">
+        <h2>📊 Results</h2>
+        <div class="results-actions">
+          <div class="filter-group">
+            <button class="filter-btn active" onclick="filterResults('all')" data-filter="all">All</button>
+            <button class="filter-btn" onclick="filterResults('valid')" data-filter="valid">Valid</button>
+            <button class="filter-btn" onclick="filterResults('invalid')" data-filter="invalid">Invalid</button>
+            <button class="filter-btn" onclick="filterResults('risky')" data-filter="risky">Risky</button>
+            <button class="filter-btn" onclick="filterResults('unknown')" data-filter="unknown">Unknown</button>
+          </div>
+          <button class="btn-secondary" onclick="toggleDownloadPanel()">
+            <span class="btn-icon">📥</span> Download ▾
+          </button>
+        </div>
+      </div>
+
+      <!-- Custom Download Panel -->
+      <div class="download-panel hidden" id="downloadPanel">
+        <h3>📥 Custom Download</h3>
+        <p class="download-hint">Select which email types to include:</p>
+        <div class="checkbox-grid">
+          <label class="checkbox-card cb-valid">
+            <input type="checkbox" id="cbValid" value="valid" checked onchange="updateSelectedCount()" />
+            <span class="cb-icon">✅</span>
+            <span class="cb-text">Valid</span>
+            <span class="cb-count" id="cbValidCount">0</span>
+          </label>
+          <label class="checkbox-card cb-invalid">
+            <input type="checkbox" id="cbInvalid" value="invalid" onchange="updateSelectedCount()" />
+            <span class="cb-icon">❌</span>
+            <span class="cb-text">Invalid</span>
+            <span class="cb-count" id="cbInvalidCount">0</span>
+          </label>
+          <label class="checkbox-card cb-risky">
+            <input type="checkbox" id="cbRisky" value="risky" onchange="updateSelectedCount()" />
+            <span class="cb-icon">⚠️</span>
+            <span class="cb-text">Risky</span>
+            <span class="cb-count" id="cbRiskyCount">0</span>
+          </label>
+          <label class="checkbox-card cb-unknown">
+            <input type="checkbox" id="cbUnknown" value="unknown" onchange="updateSelectedCount()" />
+            <span class="cb-icon">❔</span>
+            <span class="cb-text">Unknown</span>
+            <span class="cb-count" id="cbUnknownCount">0</span>
+          </label>
+        </div>
+        <div class="download-actions">
+          <span class="selected-count" id="selectedCount">0 emails selected</span>
+          <div class="download-btns">
+            <button class="btn-primary btn-sm" onclick="exportCustomCSV()">
+              <span class="btn-icon">📄</span> Download CSV
+            </button>
+            <button class="btn-secondary btn-sm" onclick="exportCustomEmailsOnly()">
+              <span class="btn-icon">📧</span> Emails Only (.txt)
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="table-wrapper">
+        <table id="resultsTable">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Email</th>
+              <th>Status</th>
+              <th>Reason</th>
+              <th>MX Record</th>
+              <th>Disposable</th>
+              <th>Catch-All</th>
+              <th>Response</th>
+            </tr>
+          </thead>
+          <tbody id="resultsBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <p>Built with ❤️ — No API keys required. 100% self-hosted.</p>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
